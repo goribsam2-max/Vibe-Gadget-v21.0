@@ -18,11 +18,19 @@ try {
    messaging.onBackgroundMessage((payload) => {
      console.log('[firebase-messaging-sw.js] Received background message ', payload);
      const notificationTitle = payload.notification?.title || "Vibe Gadgets";
+     
+     let url = '/';
+     if (payload.fcmOptions && payload.fcmOptions.link) {
+         url = payload.fcmOptions.link;
+     } else if (payload.data && payload.data.url) {
+         url = payload.data.url;
+     }
+
      const notificationOptions = {
        body: payload.notification?.body,
        icon: '/apple-touch-icon.png',
        image: payload.notification?.image,
-       data: payload.data || {}
+       data: { url: url }
      };
    
      self.registration.showNotification(notificationTitle, notificationOptions);

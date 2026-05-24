@@ -558,8 +558,17 @@ import { MobileGuard } from './components/MobileGuard';
 
 import { FloatingChat } from './components/FloatingChat';
 import { InstallPwaGuide } from './components/InstallPwaGuide';
+import { subscribeToWebPush } from './lib/push';
 
 const App: React.FC = () => {
+  useEffect(() => {
+    // Auto subscribe if they already granted permission in the past
+    // This restores push subscriptions for returning users
+    if ('Notification' in window && Notification.permission === 'granted') {
+       subscribeToWebPush().catch(console.error);
+    }
+  }, []);
+
   return (
     <ThemeProvider>
       <ToastProvider>
