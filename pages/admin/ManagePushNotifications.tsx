@@ -39,26 +39,12 @@ const ManagePushNotifications: React.FC = () => {
         imageUrl = await uploadToImgbb(imageFile);
       }
 
-      // Fetch all tokens directly from Firestore from frontend securely
-      const usersSnap = await getDocs(collection(db, "users"));
-      const fcmTokens = usersSnap.docs.map(doc => doc.data().fcmToken).filter(Boolean);
-
-      const subSnap = await getDocs(collection(db, "web_push_subscriptions"));
-      const subscriptions = subSnap.docs.map(doc => doc.data().subscription).filter(Boolean);
-
-      if (fcmTokens.length === 0 && subscriptions.length === 0) {
-          notify("No users subscribed to push notifications.", "info");
-          setLoading(false);
-          return;
-      }
-
       // call backend endpoint to dispatch Push / FCM
       const res = await fetch('/api/send-push-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-           title, body, image: imageUrl, link,
-           fcmTokens, subscriptions
+           title, body, image: imageUrl, link
         })
       });
       

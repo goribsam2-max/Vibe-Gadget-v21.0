@@ -104,9 +104,26 @@ async function startServer() {
 
   app.post("/api/send-push-all", express.json(), async (req, res) => {
     try {
-      const { title, body, image, link, fcmTokens = [], subscriptions = [] } = req.body;
+      const { title, body, image, link } = req.body;
       
       let successCount = 0;
+      let fcmTokens: string[] = [];
+      let subscriptions: any[] = [];
+
+      try {
+        const db = getFirestore();
+        const usersSnap = await db.collection("users").get();
+        fcmTokens = usersSnap.docs.map((doc: any) => doc.data().fcmToken).filter(Boolean);
+
+        const subSnap = await db.collection("web_push_subscriptions").get();
+        subscriptions = subSnap.docs.map((doc: any) => doc.data().subscription).filter(Boolean);
+      } catch (e) {
+        console.error("Failed to fetch tokens", e);
+      }
+
+      if (fcmTokens.length === 0 && subscriptions.length === 0) {
+        return res.status(400).json({ error: "No users subscribed to push notifications" });
+      }
 
       // 1. FCM Tokens (Legacy Native or other methods) - requires Admin SDK
       if (fcmTokens.length > 0 && admin.apps?.length) {

@@ -49,7 +49,21 @@ export const InstallPwaGuide: React.FC = () => {
 
         if ((window as any).deferredPrompt) {
              setDeferredPrompt((window as any).deferredPrompt);
+             localStorage.setItem('pwa_installed', 'false');
         }
+
+        const handlePromptReady = () => {
+             if ((window as any).deferredPrompt) {
+                 setDeferredPrompt((window as any).deferredPrompt);
+                 localStorage.setItem('pwa_installed', 'false');
+                 if (sessionStorage.getItem('pwa_dismissed') !== 'true') {
+                     setIsInstalled(false);
+                     setMode('install');
+                     setShowInstall(true);
+                 }
+             }
+        };
+        window.addEventListener('deferredprompt_ready', handlePromptReady);
 
         const handleBeforeInstallPrompt = (e: any) => {
             e.preventDefault();
@@ -58,7 +72,7 @@ export const InstallPwaGuide: React.FC = () => {
             
             localStorage.setItem('pwa_installed', 'false');
             
-            if (localStorage.getItem('pwa_dismissed') !== 'true') {
+            if (sessionStorage.getItem('pwa_dismissed') !== 'true') {
                 setIsInstalled(false);
                 setMode('install');
                 setShowInstall(true);
@@ -73,7 +87,7 @@ export const InstallPwaGuide: React.FC = () => {
         if (isStandalone) {
              localStorage.setItem('pwa_installed', 'true');
              // Ask for push notification if not enabled
-             if ('Notification' in window && Notification.permission === 'default' && localStorage.getItem('push_dismissed') !== 'true') {
+             if ('Notification' in window && Notification.permission === 'default' && sessionStorage.getItem('push_dismissed') !== 'true') {
                  setTimeout(() => {
                      setMode('push');
                      setShowInstall(true);
@@ -82,7 +96,7 @@ export const InstallPwaGuide: React.FC = () => {
                  setShowInstall(false);
                  setMode(null);
              }
-        } else if (localStorage.getItem('pwa_dismissed') !== 'true') {
+        } else if (sessionStorage.getItem('pwa_dismissed') !== 'true') {
              // Not standalone.
              if (localStorage.getItem('pwa_installed') === 'true') {
                  // They say they installed it previously? Might just be viewing in browser.
@@ -90,15 +104,7 @@ export const InstallPwaGuide: React.FC = () => {
                  setIsInstalled(true);
                  setMode('install');
                  setShowInstall(true);
-             } else if (isIOS) {
-                 // iOS doesn't have beforeinstallprompt, so we just show it
-                 setTimeout(() => {
-                     setMode('install');
-                     setShowInstall(true);
-                 }, 3000);
              } else {
-                 // For Android, wait a bit. If deferredPrompt isn't there after 3s, show anyway?
-                 // He wants it to ALWAYS show. So we show it anyway.
                  setTimeout(() => {
                      setMode('install');
                      setShowInstall(true);
@@ -107,6 +113,7 @@ export const InstallPwaGuide: React.FC = () => {
         }
 
         return () => {
+            window.removeEventListener('deferredprompt_ready', handlePromptReady);
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         };
     }, []);
@@ -114,25 +121,34 @@ export const InstallPwaGuide: React.FC = () => {
     const simulateDownload = (duration: number) => {
         setIsDownloading(true);
         setDownloadProgress(0);
-        const steps = 30;
-        const interval = duration / steps;
         let currentProgress = 0;
         
-        const timer = setInterval(() => {
-            currentProgress += 100 / steps;
-            if (currentProgress >= 100) {
-                clearInterval(timer);
-                setDownloadProgress(null);
-                setIsDownloading(false);
-                setIsInstalled(true);
-                localStorage.setItem('pwa_installed', 'true');
-                if (mode !== 'push') {
-                    setTimeout(() => setShowInstall(false), 2500);
-                }
-            } else {
+        const tick = () => {
+            if (currentProgress < 100) {
+                // Add random progress chunk (2 to 12)
+                currentProgress += Math.random() * 10 + 2;
+                if (currentProgress >= 100) currentProgress = 100;
                 setDownloadProgress(Math.floor(currentProgress));
+                
+                if (currentProgress < 100) {
+                    // Random delay between 100ms and 400ms for realistic stopping/starting
+                    setTimeout(tick, Math.random() * 300 + 100);
+                } else {
+                    setTimeout(() => {
+                        setDownloadProgress(null);
+                        setIsDownloading(false);
+                        setIsInstalled(true);
+                        localStorage.setItem('pwa_installed', 'true');
+                        // Never auto-hide if they want to see "Open"!
+                        // He said: "download thakle open dekhabe". So we don't hide it automatically unless it's push
+                        if (mode === 'push') {
+                            setTimeout(() => setShowInstall(false), 2500);
+                        }
+                    }, 500);
+                }
             }
-        }, interval);
+        };
+        tick();
     };
 
     const handleInstallParams = async () => {
@@ -161,7 +177,7 @@ export const InstallPwaGuide: React.FC = () => {
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     setDeferredPrompt(null);
-                    localStorage.setItem('pwa_dismissed', 'true');
+                    sessionStorage.setItem('pwa_dismissed', 'true');
                     simulateDownload(2500);
                 }
             } catch (err) {
@@ -180,9 +196,9 @@ export const InstallPwaGuide: React.FC = () => {
     const handleDismiss = () => {
         setShowInstall(false);
         if (mode === 'push') {
-            localStorage.setItem('push_dismissed', 'true');
+            sessionStorage.setItem('push_dismissed', 'true');
         } else {
-            localStorage.setItem('pwa_dismissed', 'true');
+            sessionStorage.setItem('pwa_dismissed', 'true');
         }
     };
 
@@ -294,14 +310,17 @@ export const InstallPwaGuide: React.FC = () => {
             case 'style5':
                 // Top Notification Bar
                 return (
-                    <motion.div initial={{ y: "-100%" }} animate={{ y: 0 }} exit={{ y: "-100%" }} className="fixed top-0 left-0 right-0 bg-indigo-600 text-white p-3 z-[99999] flex items-center justify-between pt-safe shadow-lg">
-                        <div className="flex items-center gap-3">
-                            <AppIcon className="w-8 h-8 rounded-lg" />
-                            <span className="text-xs font-medium">{getDescription()}</span>
+                    <motion.div initial={{ y: "-100%" }} animate={{ y: 0 }} exit={{ y: "-100%" }} className="fixed top-0 left-0 right-0 bg-indigo-600 text-white p-3 z-[999999] flex items-center justify-between pt-safe shadow-lg">
+                        <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                            <AppIcon className="w-8 h-8 rounded-lg shrink-0" />
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-semibold truncate leading-tight">{getTitle()}</span>
+                                <span className="text-[10px] font-medium opacity-90 truncate leading-tight">{getDescription()}</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                           {renderInstallButton("bg-white text-indigo-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1")}
-                           <button onClick={handleDismiss}><X size={16} className="text-indigo-200"/></button>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                           {renderInstallButton("bg-white text-indigo-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center justify-center min-w-[70px]")}
+                           <button onClick={handleDismiss} className="p-1"><X size={16} className="text-indigo-200"/></button>
                         </div>
                     </motion.div>
                 );
@@ -382,17 +401,17 @@ export const InstallPwaGuide: React.FC = () => {
                         exit={{ opacity: 0, y: 50 }}
                         className="fixed bottom-[80px] md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:max-w-sm bg-white dark:bg-zinc-800 rounded-2xl shadow-2xl border border-zinc-100 dark:border-zinc-700 p-4 z-[100005]"
                     >
-                        <button onClick={handleDismiss} className="absolute top-2 right-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        <button onClick={handleDismiss} className="absolute top-2 right-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1">
                             <X size={16} />
                         </button>
                         <div className="flex items-center gap-4">
-                            <div className="shrink-0 flex items-center justify-center">
-                                <AppIcon />
+                            <div className="shrink-0 flex flex-col items-center justify-center">
+                                <AppIcon className="w-14 h-14 rounded-2xl mb-1 shadow-sm" />
                             </div>
-                            <div className="flex-1 pr-2">
-                                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{getTitle()}</h4>
-                                <p className="text-xs text-zinc-500 mb-3">{getDescription()}</p>
-                                {renderInstallButton("bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs px-4 py-2 rounded-lg font-semibold flex items-center gap-2")}
+                            <div className="flex-1 pr-4">
+                                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1 leading-tight">{getTitle()}</h4>
+                                <p className="text-[11px] text-zinc-500 mb-3 leading-snug">{getDescription()}</p>
+                                {renderInstallButton("bg-black dark:bg-white text-white dark:text-black text-xs px-4 py-2 rounded-lg font-bold flex items-center justify-center w-full")}
                             </div>
                         </div>
                     </motion.div>
