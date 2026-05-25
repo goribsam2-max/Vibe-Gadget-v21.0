@@ -10,19 +10,29 @@ export const InstallPwaGuide: React.FC = () => {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showInstall, setShowInstall] = useState(false);
     const [isIos, setIsIos] = useState(false);
-    const [config, setConfig] = useState({ style: 'style1', icon: '' });
+    const [config, setConfig] = useState(() => {
+        try {
+           const cached = localStorage.getItem('pwa_popup_config');
+           return cached ? JSON.parse(cached) : { style: 'style1', icon: '' };
+        } catch(e) {
+           return { style: 'style1', icon: '' };
+        }
+    });
     const [isConfigLoaded, setIsConfigLoaded] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
     const [isInstalled, setIsInstalled] = useState(false);
     const [mode, setMode] = useState<'install' | 'push' | null>(null);
 
     useEffect(() => {
         const unsub = onSnapshot(doc(db, "settings", "platform"), (docSnap) => {
             if (docSnap.exists()) {
-                setConfig({
+                const newConfig = {
                     style: docSnap.data().pwaPopupStyle || 'style1',
                     icon: docSnap.data().pwaPopupIcon || ''
-                });
+                };
+                setConfig(newConfig);
+                localStorage.setItem('pwa_popup_config', JSON.stringify(newConfig));
             }
             setIsConfigLoaded(true);
         });
@@ -39,8 +49,23 @@ export const InstallPwaGuide: React.FC = () => {
         const handleBeforeInstallPrompt = (e: any) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            if (localStorage.getItem('pwa_dismissed') !== 'true') {
-                // If it was previously marked installed, maybe it was uninstalled
+            // If the browser fires beforeinstallprompt, it means the app is NOT installed.
+            // Even if they dismissed it before, we clear it and eventually show it if they requested it to always show. 
+            // Wait, if they just dismissed it (X), it should stay dismissed.
+            // But the user said: "se remove korleo refresh dile abr dekhabe download dile open dekhabei close dile close hoye jabe r dekhabe na"
+            // Translation: "If they remove it, on refresh it will show again. If they click download it shows open. If they close it (X), it will close and not show again."
+            // So if they close it, it's dismissed. If they install it, we don't know it was uninstalled until beforeinstallprompt fires AGAIN on next visit.
+            // If they installed it, pwa_installed is true. If they dismissed it, pwa_dismissed is true.
+            
+            if (localStorage.getItem('pwa_installed') === 'true') {
+                // They previously installed it, but now beforeinstallprompt fired! So they MUST have uninstalled it.
+                // Reset state so it shows again!
+                localStorage.removeItem('pwa_installed');
+                localStorage.removeItem('pwa_dismissed');
+                setIsInstalled(false);
+                setMode('install');
+                setShowInstall(true);
+            } else if (localStorage.getItem('pwa_dismissed') !== 'true') {
                 setIsInstalled(false);
                 setMode('install');
                 setShowInstall(true);
@@ -77,6 +102,30 @@ export const InstallPwaGuide: React.FC = () => {
         };
     }, []);
 
+    const simulateDownload = (duration: number) => {
+        setIsDownloading(true);
+        setDownloadProgress(0);
+        const steps = 30;
+        const interval = duration / steps;
+        let currentProgress = 0;
+        
+        const timer = setInterval(() => {
+            currentProgress += 100 / steps;
+            if (currentProgress >= 100) {
+                clearInterval(timer);
+                setDownloadProgress(null);
+                setIsDownloading(false);
+                setIsInstalled(true);
+                localStorage.setItem('pwa_installed', 'true');
+                if (mode !== 'push') {
+                    setTimeout(() => setShowInstall(false), 2500);
+                }
+            } else {
+                setDownloadProgress(Math.floor(currentProgress));
+            }
+        }, interval);
+    };
+
     const handleInstallParams = async () => {
         if (mode === 'push') {
             await subscribeToWebPush();
@@ -85,10 +134,10 @@ export const InstallPwaGuide: React.FC = () => {
         }
 
         // Handle Installation Mode
-        if (isInstalled) {
-            // Already simulated install, open it?
-            // Nothing much browser can do here, maybe just reload or hint them.
-            setShowInstall(false);
+        if (isInstalled || isDownloading) {
+            if (isInstalled && !isDownloading) {
+                setShowInstall(false);
+            }
             return;
         }
 
@@ -98,29 +147,21 @@ export const InstallPwaGuide: React.FC = () => {
         }
 
         if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                setDeferredPrompt(null);
-                setIsDownloading(true);
-                // Simulate download
-                setTimeout(() => {
-                   setIsDownloading(false);
-                   setIsInstalled(true);
-                   localStorage.setItem('pwa_dismissed', 'true');
-                   // Show 'Open' state
-                   setTimeout(() => {
-                       setShowInstall(false); // Hide eventually
-                   }, 3000);
-                }, 2000);
+            try {
+                await deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    setDeferredPrompt(null);
+                    localStorage.setItem('pwa_dismissed', 'true');
+                    simulateDownload(2500);
+                }
+            } catch (err) {
+                console.error("Prompt failed", err);
+                simulateDownload(2000); 
             }
         } else {
             // Fallback for missing deferredPrompt on non-iOS
-            setIsDownloading(true);
-            setTimeout(() => {
-               setIsDownloading(false);
-               setIsInstalled(true);
-            }, 1000);
+            simulateDownload(2500);
         }
     };
 
@@ -155,11 +196,16 @@ export const InstallPwaGuide: React.FC = () => {
             );
         }
         
-        let btnText = "Download";
+        let btnText: React.ReactNode = "Download";
         if (isIos) btnText = "Get";
         
-        if (isDownloading) {
-            btnText = "Downloading...";
+        if (isDownloading && downloadProgress !== null) {
+            btnText = (
+                <div className="flex items-center gap-2 relative z-10 w-full justify-center">
+                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    <span className="font-mono text-[10px] sm:text-xs">{downloadProgress}%</span>
+                </div>
+            );
         } else if (isInstalled) {
             btnText = "Open";
         }
@@ -171,10 +217,16 @@ export const InstallPwaGuide: React.FC = () => {
         return (
             <button 
                 onClick={isInstalled ? () => setShowInstall(false) : handleInstallParams} 
-                className={className}
+                className={`${className} relative overflow-hidden transition-all duration-300 min-w-[90px] justify-center`}
                 disabled={isDownloading}
             >
-                {isDownloading ? <span className="animate-pulse">{btnText}</span> : btnText}
+                {isDownloading && downloadProgress !== null && (
+                    <div 
+                        className="absolute left-0 top-0 bottom-0 bg-black/10 dark:bg-white/20 transition-all duration-200"
+                        style={{ width: `${downloadProgress}%` }}
+                    />
+                )}
+                {btnText}
             </button>
         );
     };
@@ -197,9 +249,9 @@ export const InstallPwaGuide: React.FC = () => {
                     </motion.div>
                 );
             case 'style3':
-                // Classic Bottom Banner -> sits exactly above bottom nav
+                // Classic Bottom Banner -> sits exactly below bottom nav visually
                 return (
-                    <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed bottom-[65px] md:bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 p-4 z-[99999] flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+                    <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 p-4 pb-safe z-[90] flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
                         <div className="flex items-center gap-3">
                             <AppIcon />
                             <div>
@@ -230,7 +282,7 @@ export const InstallPwaGuide: React.FC = () => {
             case 'style5':
                 // Top Notification Bar
                 return (
-                    <motion.div initial={{ y: "-100%" }} animate={{ y: 0 }} exit={{ y: "-100%" }} className="fixed top-0 left-0 right-0 bg-indigo-600 text-white p-3 z-[100005] flex items-center justify-between pt-safe">
+                    <motion.div initial={{ y: "-100%" }} animate={{ y: 0 }} exit={{ y: "-100%" }} className="fixed top-14 left-0 right-0 bg-indigo-600 text-white p-3 z-[90] flex items-center justify-between pt-safe">
                         <div className="flex items-center gap-3">
                             <div className="w-6 h-6"><AppIcon /></div>
                             <span className="text-xs font-medium">{getDescription()}</span>
@@ -321,9 +373,11 @@ export const InstallPwaGuide: React.FC = () => {
                         <button onClick={handleDismiss} className="absolute top-2 right-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                             <X size={16} />
                         </button>
-                        <div className="flex items-start gap-4">
-                            <AppIcon />
-                            <div>
+                        <div className="flex items-center gap-4">
+                            <div className="shrink-0 flex items-center justify-center">
+                                <AppIcon />
+                            </div>
+                            <div className="flex-1 pr-2">
                                 <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{getTitle()}</h4>
                                 <p className="text-xs text-zinc-500 mb-3">{getDescription()}</p>
                                 {renderInstallButton("bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs px-4 py-2 rounded-lg font-semibold flex items-center gap-2")}

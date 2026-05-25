@@ -37,15 +37,11 @@ export async function subscribeToWebPush() {
 
             const uid = auth.currentUser?.uid;
             
-            // Save to Firestore directly from client
-            const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-            const { db } = await import('../firebase');
-            
-            const endpointHash = btoa(subscription.endpoint).replace(/[^a-zA-Z0-9]/g, '');
-            await setDoc(doc(db, "web_push_subscriptions", endpointHash), {
-                subscription: JSON.parse(JSON.stringify(subscription)),
-                uid: uid || null,
-                createdAt: serverTimestamp()
+            // Save subscription to backend
+            await fetch('/api/web-push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subscription, uid }) 
             });
 
             return true;

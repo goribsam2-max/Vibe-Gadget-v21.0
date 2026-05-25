@@ -55,8 +55,8 @@ export function FloatingPaths({ position }: { position: number }) {
 export function AuthLayout({ children, title, subtitle }: { children: React.ReactNode, title?: string, subtitle?: string }) {
     const navigate = useNavigate();
 	return (
-		<main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2 bg-background text-foreground shrink-0 min-h-screen">
-			<div className="bg-muted/60 relative hidden h-full flex-col border-r p-10 lg:flex">
+		<main className="relative min-h-screen lg:grid lg:grid-cols-2 bg-background text-foreground shrink-0">
+			<div className="bg-muted/60 relative hidden h-full min-h-screen flex-col border-r p-10 lg:flex lg:sticky lg:top-0">
 				<div className="from-background absolute inset-0 z-10 bg-gradient-to-t to-transparent" />
 				<div className="z-10 flex items-center gap-2">
 					<Logo scale={1} className="origin-left" />
