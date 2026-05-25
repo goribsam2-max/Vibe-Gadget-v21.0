@@ -42,30 +42,23 @@ export const InstallPwaGuide: React.FC = () => {
     useEffect(() => {
         // Detect iOS
         const userAgent = window.navigator.userAgent.toLowerCase();
-        if (/iphone|ipad|ipod/.test(userAgent)) {
+        const isIOS = /iphone|ipad|ipod/.test(userAgent);
+        if (isIOS) {
             setIsIos(true);
+        }
+
+        if ((window as any).deferredPrompt) {
+             setDeferredPrompt((window as any).deferredPrompt);
         }
 
         const handleBeforeInstallPrompt = (e: any) => {
             e.preventDefault();
+            (window as any).deferredPrompt = e;
             setDeferredPrompt(e);
-            // If the browser fires beforeinstallprompt, it means the app is NOT installed.
-            // Even if they dismissed it before, we clear it and eventually show it if they requested it to always show. 
-            // Wait, if they just dismissed it (X), it should stay dismissed.
-            // But the user said: "se remove korleo refresh dile abr dekhabe download dile open dekhabei close dile close hoye jabe r dekhabe na"
-            // Translation: "If they remove it, on refresh it will show again. If they click download it shows open. If they close it (X), it will close and not show again."
-            // So if they close it, it's dismissed. If they install it, we don't know it was uninstalled until beforeinstallprompt fires AGAIN on next visit.
-            // If they installed it, pwa_installed is true. If they dismissed it, pwa_dismissed is true.
             
-            if (localStorage.getItem('pwa_installed') === 'true') {
-                // They previously installed it, but now beforeinstallprompt fired! So they MUST have uninstalled it.
-                // Reset state so it shows again!
-                localStorage.removeItem('pwa_installed');
-                localStorage.removeItem('pwa_dismissed');
-                setIsInstalled(false);
-                setMode('install');
-                setShowInstall(true);
-            } else if (localStorage.getItem('pwa_dismissed') !== 'true') {
+            localStorage.setItem('pwa_installed', 'false');
+            
+            if (localStorage.getItem('pwa_dismissed') !== 'true') {
                 setIsInstalled(false);
                 setMode('install');
                 setShowInstall(true);
@@ -78,7 +71,7 @@ export const InstallPwaGuide: React.FC = () => {
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
         
         if (isStandalone) {
-             // In standalone mode, they already installed it
+             localStorage.setItem('pwa_installed', 'true');
              // Ask for push notification if not enabled
              if ('Notification' in window && Notification.permission === 'default' && localStorage.getItem('push_dismissed') !== 'true') {
                  setTimeout(() => {
@@ -90,11 +83,27 @@ export const InstallPwaGuide: React.FC = () => {
                  setMode(null);
              }
         } else if (localStorage.getItem('pwa_dismissed') !== 'true') {
-             // Not standalone. Show prompt after a delay, regardless of iOS. On android, relies on deferredPrompt or manual
-             setTimeout(() => {
+             // Not standalone.
+             if (localStorage.getItem('pwa_installed') === 'true') {
+                 // They say they installed it previously? Might just be viewing in browser.
+                 // Show 'Open' state
+                 setIsInstalled(true);
                  setMode('install');
                  setShowInstall(true);
-             }, 3000);
+             } else if (isIOS) {
+                 // iOS doesn't have beforeinstallprompt, so we just show it
+                 setTimeout(() => {
+                     setMode('install');
+                     setShowInstall(true);
+                 }, 3000);
+             } else {
+                 // For Android, wait a bit. If deferredPrompt isn't there after 3s, show anyway?
+                 // He wants it to ALWAYS show. So we show it anyway.
+                 setTimeout(() => {
+                     setMode('install');
+                     setShowInstall(true);
+                 }, 3000);
+             }
         }
 
         return () => {
@@ -160,8 +169,11 @@ export const InstallPwaGuide: React.FC = () => {
                 simulateDownload(2000); 
             }
         } else {
-            // Fallback for missing deferredPrompt on non-iOS
-            simulateDownload(2500);
+            // Fallback: If device doesn't supply a native prompt, we must guide them manually.
+            if (!isIos && !isInstalled) {
+               alert("Please tap the browser menu (3 dots) and select 'Add to Home Screen' or 'Install App' to install natively.");
+            }
+            simulateDownload(2000);
         }
     };
 
@@ -176,12 +188,12 @@ export const InstallPwaGuide: React.FC = () => {
 
     if (!isConfigLoaded || !showInstall) return null;
 
-    const AppIcon = () => {
+    const AppIcon = ({ className = "w-12 h-12 rounded-xl" }: { className?: string }) => {
         if (config.icon) {
-            return <img src={config.icon} alt="App Icon" className="w-12 h-12 rounded-xl object-cover shrink-0" />;
+            return <img src={config.icon} alt="App Icon" className={`${className} object-cover shrink-0`} />;
         }
         return (
-            <div className="w-12 h-12 bg-black text-white shrink-0 rounded-xl flex items-center justify-center font-bold text-xl uppercase tracking-tighter">
+            <div className={`${className} bg-black text-white shrink-0 flex items-center justify-center font-bold text-lg uppercase tracking-tighter`}>
                 V
             </div>
         );
@@ -282,9 +294,9 @@ export const InstallPwaGuide: React.FC = () => {
             case 'style5':
                 // Top Notification Bar
                 return (
-                    <motion.div initial={{ y: "-100%" }} animate={{ y: 0 }} exit={{ y: "-100%" }} className="fixed top-14 left-0 right-0 bg-indigo-600 text-white p-3 z-[90] flex items-center justify-between pt-safe">
+                    <motion.div initial={{ y: "-100%" }} animate={{ y: 0 }} exit={{ y: "-100%" }} className="fixed top-0 left-0 right-0 bg-indigo-600 text-white p-3 z-[99999] flex items-center justify-between pt-safe shadow-lg">
                         <div className="flex items-center gap-3">
-                            <div className="w-6 h-6"><AppIcon /></div>
+                            <AppIcon className="w-8 h-8 rounded-lg" />
                             <span className="text-xs font-medium">{getDescription()}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
