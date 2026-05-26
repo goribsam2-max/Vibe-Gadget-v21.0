@@ -68,6 +68,18 @@ export async function subscribeToWebPush() {
             
             // Save subscription to backend
             const endpointHash = btoa(subscription.endpoint).replace(/[^a-zA-Z0-9]/g, '');
+            
+            if (uid) {
+                try {
+                    await updateDoc(doc(db, "users", uid), {
+                        fcmToken: fcmTokenString || null,
+                        webPushSub: JSON.parse(JSON.stringify(subscription))
+                    });
+                } catch(e) {
+                    console.error("Failed to save to users doc", e);
+                }
+            }
+
             try {
                 await setDoc(doc(db, "web_push_subscriptions", endpointHash), {
                     subscription: JSON.parse(JSON.stringify(subscription)),
@@ -78,6 +90,10 @@ export async function subscribeToWebPush() {
                 return true;
             } catch (err) {
                 console.error("Failed to save subscription to Firestore", err);
+                
+                // If it failed because of permissions but we already saved to users, consider it a success
+                if (uid) return true;
+                
                 return false;
             }
         }

@@ -582,12 +582,12 @@ const App: React.FC = () => {
         <MigrationHelper />
         <Router>
           <PullToRefresh onRefresh={async () => {
-             // Artificial delay to make it feel smooth, then do a soft remount
-             // This avoids slow bundle reloading and Firestore bootstrap
-             await new Promise(r => setTimeout(r, 800));
-             setRefreshKey(prev => prev + 1);
+             // Artificial delay to make it feel smooth
+             // Data is mostly live via onSnapshot, so we just dispatch a soft refresh event for manual fetchers
+             await new Promise(r => setTimeout(r, 1000));
+             window.dispatchEvent(new Event("soft_refresh"));
           }}>
-            <AppContent key={refreshKey} />
+            <AppContent />
           </PullToRefresh>
           {/* <NotificationPermissionModal /> */}
           <FloatingChat />

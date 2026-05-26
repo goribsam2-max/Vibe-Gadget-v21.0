@@ -42,11 +42,23 @@ const ManagePushNotifications: React.FC = () => {
       // call backend endpoint to dispatch Push / FCM
       const usersSnap = await getDocs(collection(db, "users"));
       const fcmTokens = usersSnap.docs.map((doc: any) => doc.data().fcmToken).filter(Boolean);
+      
+      const userSubscriptions = usersSnap.docs.map((doc: any) => doc.data().webPushSub).filter(Boolean);
 
-      const subSnap = await getDocs(collection(db, "web_push_subscriptions"));
-      const subscriptions = subSnap.docs.map((doc: any) => doc.data().subscription).filter(Boolean);
+      let subscriptions: any[] = [];
+      try {
+          const subSnap = await getDocs(collection(db, "web_push_subscriptions"));
+          subscriptions = subSnap.docs.map((doc: any) => doc.data().subscription).filter(Boolean);
+      } catch (e) {
+          console.error("Could not fetch web_push_subscriptions collection, probably permission denied.");
+      }
+      
+      // Merge user subscriptions and collection subscriptions
+      const allSubs = [...subscriptions, ...userSubscriptions];
+      // Deduplicate by endpoint
+      const uniqueSubs = Array.from(new Map(allSubs.map(item => [item.endpoint, item])).values());
 
-      if (fcmTokens.length === 0 && subscriptions.length === 0) {
+      if (fcmTokens.length === 0 && uniqueSubs.length === 0) {
          notify("No users subscribed to push notifications", "error");
          setLoading(false);
          return;
@@ -57,7 +69,7 @@ const ManagePushNotifications: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
            title, body, image: imageUrl, link,
-           fcmTokens, subscriptions
+           fcmTokens, subscriptions: uniqueSubs
         })
       });
       
