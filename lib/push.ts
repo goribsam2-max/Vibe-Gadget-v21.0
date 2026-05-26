@@ -67,18 +67,19 @@ export async function subscribeToWebPush() {
             const uid = auth.currentUser?.uid;
             
             // Save subscription to backend
-            const subRes = await fetch('/api/web-push/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subscription, uid, fcmToken: fcmTokenString }) 
-            });
-
-            if (!subRes.ok) {
-                console.error("Failed to save subscription");
+            const endpointHash = btoa(subscription.endpoint).replace(/[^a-zA-Z0-9]/g, '');
+            try {
+                await setDoc(doc(db, "web_push_subscriptions", endpointHash), {
+                    subscription: JSON.parse(JSON.stringify(subscription)),
+                    uid: uid || null,
+                    fcmToken: fcmTokenString || null,
+                    createdAt: new Date().getTime()
+                });
+                return true;
+            } catch (err) {
+                console.error("Failed to save subscription to Firestore", err);
                 return false;
             }
-
-            return true;
         }
     } catch(e) {
         console.error('Web Push setup error', e);

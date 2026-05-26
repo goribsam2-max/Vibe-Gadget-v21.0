@@ -77,49 +77,11 @@ async function startServer() {
     res.json({ publicKey: vapidPublicKey });
   });
 
-  app.post("/api/web-push/subscribe", express.json(), async (req, res) => {
-    try {
-      if (!admin.apps?.length) return res.status(500).json({ error: "Firebase not initialized" });
-      const { subscription, uid } = req.body;
-      if (!subscription) return res.status(400).json({ error: "No subscription provided" });
-
-      const db = getFirestore();
-      
-      // We can store subscriptions globally rather than under users
-      // Or we can save them uniquely by endpoint to avoid duplicates
-      // The endpoint URL is unique per device
-      const endpointHash = Buffer.from(subscription.endpoint).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
-      await db.collection("web_push_subscriptions").doc(endpointHash).set({
-        subscription,
-        uid: uid || null,
-        createdAt: FieldValue.serverTimestamp()
-      });
-
-      res.status(201).json({ success: true });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
-  });
-
   app.post("/api/send-push-all", express.json(), async (req, res) => {
     try {
-      const { title, body, image, link } = req.body;
+      const { title, body, image, link, fcmTokens = [], subscriptions = [] } = req.body;
       
       let successCount = 0;
-      let fcmTokens: string[] = [];
-      let subscriptions: any[] = [];
-
-      try {
-        const db = getFirestore();
-        const usersSnap = await db.collection("users").get();
-        fcmTokens = usersSnap.docs.map((doc: any) => doc.data().fcmToken).filter(Boolean);
-
-        const subSnap = await db.collection("web_push_subscriptions").get();
-        subscriptions = subSnap.docs.map((doc: any) => doc.data().subscription).filter(Boolean);
-      } catch (e) {
-        console.error("Failed to fetch tokens", e);
-      }
 
       if (fcmTokens.length === 0 && subscriptions.length === 0) {
         return res.status(400).json({ error: "No users subscribed to push notifications" });
