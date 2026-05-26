@@ -108,37 +108,39 @@ const Profile: React.FC<{ userData: UserProfile | null }> = ({
   }, [banners]);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          const q = query(collection(db, "orders"), where("userId", "==", user.uid));
-          const querySnapshot = await getDocs(q);
-          const userOrders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-          setOrders(userOrders);
-          setOrderCount(userOrders.length);
-        } catch (error) {
-          console.error("Error fetching orders:", error);
-        }
-      }
-    };
-    fetchOrders();
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    try {
+      const q = query(collection(db, "orders"), where("userId", "==", user.uid));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userOrders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+        setOrders(userOrders);
+        setOrderCount(userOrders.length);
+      }, (error) => {
+        console.error("Error fetching orders:", error);
+      });
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Error setting up orders listener:", error);
+    }
   }, [auth.currentUser]);
 
   useEffect(() => {
-    const fetchRecommended = async () => {
-      try {
-        const q = query(collection(db, "products"));
-        const snapshot = await getDocs(q);
+    try {
+      const q = query(collection(db, "products"));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
         const docs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         // Shuffle or just pick a few for recommendations
         const shuffled = docs.sort(() => 0.5 - Math.random());
         setRecommendedProducts(shuffled.slice(0, 6));
-      } catch (error) {
+      }, (error) => {
         console.error("Error fetching recommended products:", error);
-      }
-    };
-    fetchRecommended();
+      });
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Error setting up recommended products listener:", error);
+    }
   }, []);
 
   const handleAvatarUpload = async (file: File) => {

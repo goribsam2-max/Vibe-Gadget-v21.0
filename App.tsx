@@ -563,12 +563,17 @@ import { NetworkStatus } from './components/NetworkStatus';
 import { PullToRefresh } from './components/PullToRefresh';
 
 const App: React.FC = () => {
+  const [refreshKey, setRefreshKey] = useState(0);
+
   useEffect(() => {
     // Auto subscribe if they already granted permission in the past
     // This restores push subscriptions for returning users
-    if ('Notification' in window && Notification.permission === 'granted') {
-       subscribeToWebPush().catch(console.error);
-    }
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+           subscribeToWebPush().catch(console.error);
+        }
+    });
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -577,11 +582,12 @@ const App: React.FC = () => {
         <MigrationHelper />
         <Router>
           <PullToRefresh onRefresh={async () => {
-             // Artificial delay to make it feel smooth, then reload
+             // Artificial delay to make it feel smooth, then do a soft remount
+             // This avoids slow bundle reloading and Firestore bootstrap
              await new Promise(r => setTimeout(r, 800));
-             window.location.reload();
+             setRefreshKey(prev => prev + 1);
           }}>
-            <AppContent />
+            <AppContent key={refreshKey} />
           </PullToRefresh>
           {/* <NotificationPermissionModal /> */}
           <FloatingChat />

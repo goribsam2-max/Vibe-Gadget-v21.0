@@ -1,4 +1,6 @@
-import { auth } from '../firebase';
+import { auth, db, messaging } from '../firebase';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { getToken } from 'firebase/messaging';
 
 export async function subscribeToWebPush() {
     try {
@@ -17,6 +19,26 @@ export async function subscribeToWebPush() {
         }
         const { publicKey } = await res.json();
         
+        let fcmTokenString = null;
+        try {
+            const msg = await messaging();
+            if (msg && publicKey) {
+                const reg = await navigator.serviceWorker.ready;
+                fcmTokenString = await getToken(msg, {
+                    vapidKey: publicKey,
+                    serviceWorkerRegistration: reg
+                });
+                
+                if (fcmTokenString && auth.currentUser) {
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                        fcmToken: fcmTokenString
+                    });
+                }
+            }
+        } catch (fcmErr) {
+            console.error("FCM Token error, falling back to standard web push", fcmErr);
+        }
+
         if (publicKey) {
             const registration = await navigator.serviceWorker.ready;
             if (!registration || !registration.pushManager) {
@@ -48,7 +70,7 @@ export async function subscribeToWebPush() {
             const subRes = await fetch('/api/web-push/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subscription, uid }) 
+                body: JSON.stringify({ subscription, uid, fcmToken: fcmTokenString }) 
             });
 
             if (!subRes.ok) {

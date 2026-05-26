@@ -281,52 +281,56 @@ const ProductDetails: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const fetchProduct = async () => {
-      let matchedProduct = null;
-      let mId = id;
-
-      if (id) {
-        const snap = await getDoc(doc(db, "products", id));
+    
+    let unsubscribe: () => void;
+    let didIncrement = false;
+    
+    if (id) {
+      unsubscribe = onSnapshot(doc(db, "products", id), async (snap) => {
         if (snap.exists()) {
-          matchedProduct = { id: snap.id, ...snap.data() } as Product;
+          const matchedProduct = { id: snap.id, ...snap.data() } as Product;
+          setProduct(matchedProduct);
+          setResolvedId(snap.id);
+          if (!slug || slug !== toSlug(matchedProduct.name)) {
+            window.history.replaceState(null, "", `/${toSlug(matchedProduct.name)}`);
+          }
+          if (!didIncrement) {
+             didIncrement = true;
+             try {
+               const { increment, updateDoc } = await import("firebase/firestore");
+               await updateDoc(doc(db, "products", snap.id), { views: increment(1) });
+             } catch (e) {}
+          }
         }
-      } else if (slug) {
-        const snap = await getDocs(query(collection(db, "products")));
-        const allProducts = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() }) as Product,
-        );
-        matchedProduct = allProducts.find(
+      });
+    } else if (slug) {
+      unsubscribe = onSnapshot(query(collection(db, "products")), async (snap) => {
+        const allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }) as Product);
+        const matchedProduct = allProducts.find(
           (p) => toSlug(p.name) === slug || p.name === decodeURIComponent(slug),
         );
-        if (matchedProduct) mId = matchedProduct.id;
-      }
-
-      if (matchedProduct) {
-        setProduct(matchedProduct);
-        setResolvedId(mId as string);
-
-        // Rewrite URL
-        if (mId && (!slug || slug !== toSlug(matchedProduct.name))) {
-          window.history.replaceState(
-            null,
-            "",
-            `/${toSlug(matchedProduct.name)}`,
-          );
+        if (matchedProduct) {
+          setProduct(matchedProduct);
+          setResolvedId(matchedProduct.id);
+          if (slug !== toSlug(matchedProduct.name)) {
+            window.history.replaceState(null, "", `/${toSlug(matchedProduct.name)}`);
+          }
+          if (!didIncrement) {
+              didIncrement = true;
+              try {
+                const { increment, updateDoc } = await import("firebase/firestore");
+                await updateDoc(doc(db, "products", matchedProduct.id), { views: increment(1) });
+              } catch (e) {}
+          }
+        } else {
+          if (!id && slug) navigate("/");
         }
+      });
+    }
 
-        // Increment views
-        try {
-          const { increment, updateDoc } = await import("firebase/firestore");
-          await updateDoc(doc(db, "products", mId as string), {
-            views: increment(1),
-          });
-        } catch (e) {}
-      } else {
-        // If couldn't resolve, maybe go home
-        if (!id && slug) navigate("/");
-      }
+    return () => {
+      if (unsubscribe) unsubscribe();
     };
-    fetchProduct();
   }, [id, slug]);
 
   useEffect(() => {
