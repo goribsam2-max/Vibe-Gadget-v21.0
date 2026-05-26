@@ -305,6 +305,15 @@ export default function CheckoutPage() {
     );
     if (!activeAddress) return notify("Address required", "error");
 
+    if (paymentType === "vgcoin") {
+      const coinCost = advanceType === "full" ? total : deliveryFee;
+      if (userCoins < coinCost) {
+        notify(`Not enough VG Coins. You need ${coinCost - userCoins} more coins. Please deposit.`, "error");
+        navigate("/deposit", { state: { requiredDeposit: coinCost - userCoins } });
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       let paymentStr = "Cash on Delivery";
@@ -801,10 +810,10 @@ export default function CheckoutPage() {
                             onClick={() => {
                               if (userCoins < deliveryFee) {
                                 notify(
-                                  `Not enough coins. You need ${deliveryFee} coins.`,
+                                  `Not enough coins. You need ${deliveryFee - userCoins} more coins.`,
                                   "error",
                                 );
-                                navigate("/deposit");
+                                navigate("/deposit", { state: { requiredDeposit: deliveryFee - userCoins } });
                                 return;
                               }
                               setAdvanceType("delivery");
@@ -831,10 +840,10 @@ export default function CheckoutPage() {
                             onClick={() => {
                               if (userCoins < total) {
                                 notify(
-                                  `Not enough coins. You need ${total} coins.`,
+                                  `Not enough coins. You need ${total - userCoins} more coins.`,
                                   "error",
                                 );
-                                navigate("/deposit");
+                                navigate("/deposit", { state: { requiredDeposit: total - userCoins } });
                                 return;
                               }
                               setAdvanceType("full");

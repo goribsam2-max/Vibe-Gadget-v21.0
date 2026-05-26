@@ -2,6 +2,24 @@ import { auth, db, messaging } from '../firebase';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 
+export async function unsubscribeFromWebPush() {
+    try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            return true;
+        }
+        const registration = await navigator.serviceWorker.ready;
+        if (!registration.pushManager) return true;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+            await subscription.unsubscribe();
+        }
+        return true;
+    } catch(e) {
+        console.error('Web Push unsubscribe error', e);
+        return false;
+    }
+}
+
 export async function subscribeToWebPush() {
     try {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {

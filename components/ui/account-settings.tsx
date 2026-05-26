@@ -28,7 +28,8 @@ export function AccountSettings() {
       setEmail(user.email || '');
       setName(user.displayName || '');
     }
-    const isEnabled = localStorage.getItem("vibe_push_enabled") === "true";
+    const isGranted = typeof window !== "undefined" && 'Notification' in window && Notification.permission === 'granted';
+    const isEnabled = isGranted && localStorage.getItem("vibe_push_enabled") !== "false";
     setPushEnabled(isEnabled);
   }, []);
 
@@ -49,21 +50,27 @@ export function AccountSettings() {
   };
 
   const togglePush = async () => {
-    const OneSignal = (window as any).OneSignal;
-    if (!OneSignal) {
-      notify("Push notifications not supported on this device", "info");
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+      notify("Push notifications not supported on this browser", "info");
       return;
     }
 
     if (!pushEnabled) {
-      await OneSignal.Notifications.requestPermission();
-      localStorage.setItem("vibe_push_enabled", "true");
-      setPushEnabled(true);
-      notify("Push notifications enabled", "success");
+      const { subscribeToWebPush } = await import('@/lib/push');
+      const success = await subscribeToWebPush();
+      if (success || Notification.permission === 'granted') {
+         localStorage.setItem("vibe_push_enabled", "true");
+         setPushEnabled(true);
+         notify("Push notifications enabled", "success");
+      } else {
+         notify("Permission denied to push notifications", "error");
+      }
     } else {
+      const { unsubscribeFromWebPush } = await import('@/lib/push');
+      await unsubscribeFromWebPush();
       localStorage.setItem("vibe_push_enabled", "false");
       setPushEnabled(false);
-      notify("Push notifications disabled locally", "info");
+      notify("Push notifications disabled", "info");
     }
   };
 

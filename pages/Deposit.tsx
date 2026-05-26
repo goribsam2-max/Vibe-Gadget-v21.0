@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { collection, addDoc, getDoc, doc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useNotify } from "../components/Notifications";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Deposit: React.FC = () => {
-  const [amount, setAmount] = useState("");
+  const location = useLocation();
+  const [amount, setAmount] = useState<string>("");
   const [trxId, setTrxId] = useState("");
   const [method, setMethod] = useState("bkash");
   const [loading, setLoading] = useState(false);
@@ -13,6 +14,12 @@ const Deposit: React.FC = () => {
   
   const notify = useNotify();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.state?.requiredDeposit) {
+      setAmount(String(location.state.requiredDeposit));
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -59,7 +66,7 @@ const Deposit: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 animate-fade-in">
-      <h2 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-锌-100">Deposit Money</h2>
+      <h2 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-zinc-100">Deposit Money</h2>
       
       <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800">
         <label className="block text-sm font-semibold mb-2">Select Payment Method</label>
@@ -95,7 +102,7 @@ const Deposit: React.FC = () => {
               required
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-锌-100 outline-none"
+              className="w-full bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 outline-none"
               placeholder="e.g. 500"
             />
           </div>
@@ -106,7 +113,7 @@ const Deposit: React.FC = () => {
               required
               value={trxId}
               onChange={(e) => setTrxId(e.target.value)}
-              className="w-full bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-锌-100 outline-none"
+              className="w-full bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 outline-none"
               placeholder="e.g. 8H3KJ2L9A"
             />
           </div>

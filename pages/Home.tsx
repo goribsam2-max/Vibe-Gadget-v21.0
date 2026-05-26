@@ -604,7 +604,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             if (!userData) navigate("/auth-selector");
             else navigate("/affiliate");
           }} 
-          className="bg-[#FF6611] rounded-[24px] shadow-sm p-5 relative overflow-hidden flex flex-col justify-center cursor-pointer active:scale-[0.98] transition-transform text-white w-full max-w-lg h-36"
+          className="bg-[#FF6611] rounded-[24px] shadow-sm p-6 md:p-8 relative overflow-hidden flex flex-col justify-center cursor-pointer active:scale-[0.98] transition-transform text-white w-full max-w-2xl min-h-[160px] md:min-h-[180px]"
         >
           <h3 className="font-bold text-[20px] mb-2.5 relative z-10 leading-tight">
             {!userData ? 'Log in to refer & earn' : userData.affiliateStatus !== 'approved' ? 'Apply for partner to earn' : 'Refer a friend'}
