@@ -387,24 +387,28 @@ const Profile: React.FC<{ userData: UserProfile | null }> = ({
 
             {/* Highlighted Row */}
             <div className="grid grid-cols-2 gap-4">
-                <div onClick={() => navigate('/bundles')} className="bg-[#FFF4E6] dark:bg-[#2A1F13] rounded-[24px] p-4 flex flex-row items-center justify-between cursor-pointer shadow-sm active:scale-95 transition-transform">
-                    <div>
-                        <h4 className="font-bold text-[15px] md:text-base text-zinc-900 dark:text-zinc-100 mb-0.5 tracking-tight">Bundle offers</h4>
-                        <p className="text-xs text-zinc-500 mb-2">Infinite bundles</p>
-                        <span className="px-3 py-1 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold text-[10px] rounded-full shadow-sm">Shop now</span>
+                <div onClick={() => navigate('/bundles')} className="bg-[#FFF4E6] dark:bg-[#2A1F13] rounded-[24px] p-4 flex flex-col justify-between cursor-pointer shadow-sm active:scale-95 transition-transform relative overflow-hidden min-h-[110px]">
+                    <div className="relative z-10 w-full mb-3">
+                        <h4 className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100 mb-0.5 truncate w-full pr-8">Bundle Offers</h4>
+                        <p className="text-[11px] text-zinc-500 truncate w-full pr-8">Special combos</p>
                     </div>
-                    <ShoppingBag className="w-10 h-10 text-[#FF5C01] drop-shadow-sm opacity-90"/>
+                    <ShoppingBag className="absolute top-4 right-4 w-8 h-8 text-[#FF5C01] opacity-90"/>
+                    <div className="relative z-10 w-full flex">
+                        <span className="px-4 py-1.5 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold text-[11px] rounded-full shadow-sm border border-zinc-100 dark:border-zinc-700 truncate max-w-full text-center">Shop Now</span>
+                    </div>
                 </div>
 
-                <div onClick={() => navigate((localUserData?.coins || 0) > 0 ? '/my-coins' : '/my-coins')} className="bg-[#FFF0F5] dark:bg-[#2F1D25] rounded-[24px] p-4 flex flex-row items-center justify-between cursor-pointer shadow-sm active:scale-95 transition-transform">
-                    <div>
-                        <h4 className="font-bold text-[15px] md:text-base text-zinc-900 dark:text-zinc-100 mb-0.5 tracking-tight flex items-center">
+                <div onClick={() => navigate('/my-coins')} className="bg-[#FFF0F5] dark:bg-[#2F1D25] rounded-[24px] p-4 flex flex-col justify-between cursor-pointer shadow-sm active:scale-95 transition-transform relative overflow-hidden min-h-[110px]">
+                    <div className="relative z-10 w-full mb-3">
+                        <h4 className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100 mb-0.5 truncate w-full pr-8 flex items-center">
                             Coins: {localUserData?.coins || 0}
                         </h4>
-                        <p className="text-xs text-zinc-500 mb-2">{(localUserData?.coins || 0) > 0 ? "Check your balance" : "Deposit or earn coins"}</p>
-                        <span className="px-3 py-1 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold text-[10px] rounded-full shadow-sm">{(localUserData?.coins || 0) > 0 ? "Check Coins" : "Deposit or Earn"}</span>
+                        <p className="text-[11px] text-zinc-500 truncate w-full pr-8">Use for delivery</p>
                     </div>
-                    <CircleDollarSign className="w-10 h-10 text-amber-500 drop-shadow-sm opacity-90"/>
+                    <div className="absolute top-4 right-4 w-8 h-8 rounded-full border border-amber-500 flex items-center justify-center bg-amber-100/50 dark:bg-amber-900/40 text-amber-600 font-bold text-[15px]">৳</div>
+                    <div className="relative z-10 w-full flex">
+                        <span className="px-4 py-1.5 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold text-[11px] rounded-full shadow-sm border border-zinc-100 dark:border-zinc-700 truncate max-w-full text-center">Manage Coins</span>
+                    </div>
                 </div>
             </div>
 

@@ -98,12 +98,6 @@ const OrderActionPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <div className="flex items-center mb-8 relative z-10">
-        <button
-          onClick={() => navigate("/profile")}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition mr-4 shrink-0 shadow-sm"
-        >
-          <ArrowLeft className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-        </button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             <Tr>{getPageTitle()}</Tr>

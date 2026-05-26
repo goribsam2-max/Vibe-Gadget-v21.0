@@ -63,7 +63,7 @@ export function AccountSettings() {
          setPushEnabled(true);
          notify("Push notifications enabled", "success");
       } else {
-         notify("Permission denied to push notifications", "error");
+         notify("Permission denied. Try opening in a new tab.", "error");
       }
     } else {
       const { unsubscribeFromWebPush } = await import('@/lib/push');

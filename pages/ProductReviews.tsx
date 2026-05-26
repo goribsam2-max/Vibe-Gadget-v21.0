@@ -37,9 +37,6 @@ const ProductReviews: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto min-h-screen bg-zinc-50 dark:bg-zinc-900 pb-12">
       <div className="sticky top-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 p-4 flex items-center z-50">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition mr-4">
-          <ChevronLeft className="w-5 h-5" />
-        </button>
         <h1 className="text-xl font-bold tracking-tight"><Tr>All Reviews</Tr></h1>
       </div>
 

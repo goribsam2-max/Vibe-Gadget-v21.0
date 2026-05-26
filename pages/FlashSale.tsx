@@ -40,12 +40,6 @@ export default function FlashSale() {
         
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex items-center mb-6">
-            <button
-              onClick={() => navigate(-1)}
-              className="mr-3 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6 text-white" />
-            </button>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <span className="text-yellow-400 font-black text-3xl">⚡</span> 
               Flash Sale

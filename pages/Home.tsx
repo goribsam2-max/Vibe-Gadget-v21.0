@@ -598,13 +598,13 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       )}
 
       {/* Partner & Earn Cash (Referral Banner) */}
-      <div className="mb-10 w-full animate-fade-in group flex justify-center px-4">
+      <div className="mb-10 w-full animate-fade-in group flex justify-center px-0 md:px-4">
         <div 
           onClick={() => {
             if (!userData) navigate("/auth-selector");
             else navigate("/affiliate");
           }} 
-          className="bg-[#FF6611] rounded-[24px] shadow-sm p-6 md:p-8 relative overflow-hidden flex flex-col justify-center cursor-pointer active:scale-[0.98] transition-transform text-white w-full max-w-2xl min-h-[160px] md:min-h-[180px]"
+          className="bg-[#FF6611] rounded-none md:rounded-[24px] shadow-sm p-6 md:p-8 relative overflow-hidden flex flex-col justify-center cursor-pointer active:scale-[0.98] transition-transform text-white w-full max-w-2xl min-h-[160px] md:min-h-[180px]"
         >
           <h3 className="font-bold text-[20px] mb-2.5 relative z-10 leading-tight">
             {!userData ? 'Log in to refer & earn' : userData.affiliateStatus !== 'approved' ? 'Apply for partner to earn' : 'Refer a friend'}
