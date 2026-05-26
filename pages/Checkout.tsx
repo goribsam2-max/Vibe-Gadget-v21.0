@@ -295,6 +295,11 @@ export default function CheckoutPage() {
   };
 
   const placeOrder = async () => {
+    if (!navigator.onLine) {
+        window.dispatchEvent(new Event("showNetworkError"));
+        return;
+    }
+
     const activeAddress = savedAddresses.find(
       (a) => a.id === selectedAddressId,
     );

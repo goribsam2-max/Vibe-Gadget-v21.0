@@ -559,6 +559,8 @@ import { MobileGuard } from './components/MobileGuard';
 import { FloatingChat } from './components/FloatingChat';
 import { InstallPwaGuide } from './components/InstallPwaGuide';
 import { subscribeToWebPush } from './lib/push';
+import { NetworkStatus } from './components/NetworkStatus';
+import { PullToRefresh } from './components/PullToRefresh';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -574,10 +576,17 @@ const App: React.FC = () => {
       <ToastProvider>
         <MigrationHelper />
         <Router>
-          <AppContent />
+          <PullToRefresh onRefresh={async () => {
+             // Artificial delay to make it feel smooth, then reload
+             await new Promise(r => setTimeout(r, 800));
+             window.location.reload();
+          }}>
+            <AppContent />
+          </PullToRefresh>
           {/* <NotificationPermissionModal /> */}
           <FloatingChat />
           <InstallPwaGuide />
+          <NetworkStatus />
         </Router>
       </ToastProvider>
     </ThemeProvider>

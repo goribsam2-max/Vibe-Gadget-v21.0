@@ -20,8 +20,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Use default Firestore config instead of experimental settings to prevent INTERNAL ASSERTION errors
-export const db = initializeFirestore(app, {});
+// Enable offline persistence caching
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 
 import { getMessaging, isSupported } from "firebase/messaging";
 export const messaging = async () => {

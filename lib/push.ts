@@ -11,11 +11,18 @@ export async function subscribeToWebPush() {
         if (permission !== 'granted') return false;
 
         const res = await fetch('/api/web-push/public-key');
-        if (!res.ok) return false;
+        if (!res.ok) {
+           console.error("Failed to fetch public key");
+           return false;
+        }
         const { publicKey } = await res.json();
         
         if (publicKey) {
             const registration = await navigator.serviceWorker.ready;
+            if (!registration || !registration.pushManager) {
+                 console.error("No push manager available");
+                 return false;
+            }
             
             const urlB64ToUint8Array = (base64String: string) => {
               const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -38,11 +45,16 @@ export async function subscribeToWebPush() {
             const uid = auth.currentUser?.uid;
             
             // Save subscription to backend
-            await fetch('/api/web-push/subscribe', {
+            const subRes = await fetch('/api/web-push/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ subscription, uid }) 
             });
+
+            if (!subRes.ok) {
+                console.error("Failed to save subscription");
+                return false;
+            }
 
             return true;
         }
